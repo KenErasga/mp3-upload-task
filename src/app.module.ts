@@ -1,9 +1,9 @@
 import { Module } from '@nestjs/common';
-import { FileUploadController } from './file-upload/file-upload.controller';
+import { FileUploadModule } from './file-upload/file-upload.module';
 
 @Module({
-  imports: [],
-  controllers: [FileUploadController],
+  imports: [FileUploadModule],
+  controllers: [],
   providers: [],
 })
 export class AppModule {}

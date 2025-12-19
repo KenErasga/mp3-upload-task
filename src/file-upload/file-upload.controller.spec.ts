@@ -1,17 +1,29 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { FileUploadController } from './file-upload.controller';
+import { Mp3ParserService } from './mp3-parser.service';
 
 describe('FileUploadController', () => {
   let controller: FileUploadController;
+  let mp3ParserService: Mp3ParserService;
+
+  const mockMp3ParserService = {
+    countFrames: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FileUploadController],
-      providers: [],
+      providers: [
+        {
+          provide: Mp3ParserService,
+          useValue: mockMp3ParserService,
+        },
+      ],
     }).compile();
 
     controller = module.get<FileUploadController>(FileUploadController);
+    mp3ParserService = module.get<Mp3ParserService>(Mp3ParserService);
   });
 
   afterEach(() => {
@@ -37,7 +49,6 @@ describe('FileUploadController', () => {
     });
 
     it('should process valid MP3 file and return frame count', () => {
-      // TODO: update to count the expected frame rate
       const mockFile = {
         fieldname: 'file',
         originalname: 'test.mp3',
@@ -47,9 +58,44 @@ describe('FileUploadController', () => {
         size: 100,
       } as Express.Multer.File;
 
+      mockMp3ParserService.countFrames.mockReturnValue(1234);
+
       const result = controller.uploadFile(mockFile);
 
       expect(result).toEqual({ frameCount: 1234 });
+      expect(mp3ParserService.countFrames).toHaveBeenCalledWith(mockFile.buffer);
+    });
+
+    it('should throw error when no frames found', () => {
+      const mockFile = {
+        fieldname: 'file',
+        originalname: 'test.mp3',
+        encoding: '7bit',
+        mimetype: 'audio/mpeg',
+        buffer: Buffer.from('fake mp3 data'),
+        size: 100,
+      } as Express.Multer.File;
+
+      mockMp3ParserService.countFrames.mockReturnValue(0);
+
+      expect(() => controller.uploadFile(mockFile)).toThrow(new BadRequestException('No valid MP3 frames found in file'));
+    });
+
+    it('should throw InternalServerErrorException on parsing error', () => {
+      const mockFile = {
+        fieldname: 'file',
+        originalname: 'test.mp3',
+        encoding: '7bit',
+        mimetype: 'audio/mpeg',
+        buffer: Buffer.from('fake mp3 data'),
+        size: 100,
+      } as Express.Multer.File;
+
+      mockMp3ParserService.countFrames.mockImplementation(() => {
+        throw new Error('Parsing error');
+      });
+
+      expect(() => controller.uploadFile(mockFile)).toThrow(new InternalServerErrorException('Error processing MP3 file'));
     });
   });
 });
