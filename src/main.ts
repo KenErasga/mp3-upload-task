@@ -13,10 +13,10 @@ async function bootstrap() {
     .setVersion('1.0')
     .build();
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
+  SwaggerModule.setup('api-docs', app, document);
 
   await app.listen(3000);
   logger.log('Application is running on: http://localhost:3000');
-  logger.log('Swagger documentation available at: http://localhost:3000/api');
+  logger.log('Swagger documentation available at: http://localhost:3000/api-docs');
 }
 bootstrap();
